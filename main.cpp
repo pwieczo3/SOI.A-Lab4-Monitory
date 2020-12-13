@@ -1,4 +1,4 @@
-﻿#include "monitor.h"
+#include "monitor.h"
 #include<iostream>
 #include <stdio.h>
 #include <queue>
@@ -104,12 +104,12 @@ void Bufor::get(int c_id)
 
 	if (sum < MAX_SUM_PROD_A && A_waits && bufor.size() < MAX_SIZE)
 	{
-		std::cout<<"		Konsument "<< c_id << " budzi producenta A (signal sum_20_A)\n";
+		std::cout<<"		Konsument "<< c_id << " budzi producenta A (signal A)\n";
 		signal(A);
 	}
 	else if(B_waits && bufor.size() < MAX_SIZE)
 	{
-		std::cout<<"		Konsument "<< c_id << " budzi producentow (signal noSpaceLeft)\n";
+		std::cout<<"		Konsument "<< c_id << " budzi producenta B (signal B)\n";
 		signal(B);
 	}
 	else if(bufor.size() > MIN_FOR_CONS)
