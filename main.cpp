@@ -1,6 +1,6 @@
 #include "monitor.h"
 #include<iostream>
-#include <stdio.h>
+#include <cstdio>
 #include <queue>
 #include <random>
 #include <time.h>
@@ -15,28 +15,92 @@ class Bufor : public Monitor
 private:
 
 	std::queue<int> bufor;
-	int sum;
+	int sum=0;
 
 	Condition consumer_size;
 	Condition A;
 	Condition B;
 
-	bool A_waits;
-	bool B_waits;
-
 public:
-	Bufor();
-	void put(int value, char prod_id);
-	void get(int c_numb);
+	//Bufor();
+	//void put(int value, char prod_id);
+	void putA(int value);
+	void putB(int value);
+	//void get(int c_numb);
+	void getC(int c_numb);
 };
 
-Bufor::Bufor()
+void Bufor::putA(int value)
 {
-	sum = 0;
-	A_waits = B_waits = false;
+	enter();
+	if(bufor.size() >= MAX_SIZE || sum >= MAX_SUM_PROD_A)
+		wait(A);
+	bufor.push(value);
+	sum += value;
+	std::cout<<"PROD A    SIZE: "<<bufor.size()<<"\n";
+	for(int i=0; i<bufor.size(); ++i)
+	{
+		std::cout<<bufor.front()<<" ";
+		bufor.push(bufor.front());
+		bufor.pop();
+	}
+	std::cout<<std::endl;
+
+	if(bufor.size() == MIN_FOR_CONS+1)
+		signal(consumer_size);
+	leave();
 }
 
-void Bufor::put(int value, char prod_id)
+void Bufor::putB(int value)
+{
+	enter();
+	if(bufor.size() >= MAX_SIZE)
+		wait(B);
+	bufor.push(value);
+	sum += value;
+
+	std::cout<<"PROD B    SIZE: "<<bufor.size()<<"\n";
+	for(int i=0; i<bufor.size(); ++i)
+	{
+		std::cout<<bufor.front()<<" ";
+		bufor.push(bufor.front());
+		bufor.pop();
+	}
+	std::cout<<std::endl;
+
+	if(bufor.size() < MAX_SIZE && sum < MAX_SUM_PROD_A)
+		signal(A);
+	if(bufor.size() == MIN_FOR_CONS+1)
+		signal(consumer_size);
+	leave();
+}
+
+void Bufor::getC(int c_numb)
+{
+	enter();
+	if(bufor.size() <= MIN_FOR_CONS)
+		wait(consumer_size);
+	sum -= bufor.front();
+	bufor.pop();
+
+	std::cout<<"CONS "<<c_numb<<"    SIZE: "<<bufor.size()<<std::endl;
+	for(int i=0; i<bufor.size(); ++i)
+	{
+		std::cout<<bufor.front()<<" ";
+		bufor.push(bufor.front());
+		bufor.pop();
+	}
+	std::cout<<std::endl;
+
+	signal(B);
+	if(bufor.size() < MAX_SIZE && sum < MAX_SUM_PROD_A)
+		signal(A);
+	if(bufor.size() > MIN_FOR_CONS)
+		signal(consumer_size);
+	leave();
+}
+
+/*void Bufor::put(int value, char prod_id)
 {
 	enter();
 	if (bufor.size() >= MAX_SIZE && prod_id == 'B')
@@ -80,9 +144,9 @@ void Bufor::put(int value, char prod_id)
 		signal(consumer_size);
 	}
 	leave();
-}
+}*/
 
-void Bufor::get(int c_id)
+/*void Bufor::get(int c_id)
 {
 	enter();
 	if (bufor.size() <= MIN_FOR_CONS)
@@ -118,7 +182,7 @@ void Bufor::get(int c_id)
 		signal(consumer_size);
 	}
 	leave();
-}
+}*/
 
 Bufor mon;
 
@@ -126,8 +190,11 @@ void * producer(void * arg)
 {
 	while (true)
 	{
-		usleep(rand() % 1000000);
-		mon.put(rand() % 20, *((char *)arg));
+		usleep(rand() % 100000);
+		if(*((char *) arg) - 'A')
+			mon.putB(rand() % 20 - 10);
+		else
+			mon.putA(rand() % 20 - 10);
 	}
 }
 
@@ -136,8 +203,8 @@ void * consumer(void * arg)
 	char n = *((char *)arg);
 	while (true)
 	{
-		usleep(rand() % 1000000);
-		mon.get(n - 'A');
+		usleep(rand() % 100000);
+		mon.getC(n - 'A');
 	}
 }
 
